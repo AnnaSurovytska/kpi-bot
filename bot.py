@@ -34,7 +34,7 @@ KPI_INFO = {
 }
 
 keyboard = [
-    ["Что такое KPI", "Как писать"],
+    ["Что такое KPI", "Инструкция"],
     ["Критерии", "Файл"]
 ]
 markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
