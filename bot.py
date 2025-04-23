@@ -11,9 +11,9 @@ KPI_LINK = 'https://docs.google.com/spreadsheets/d/187czH5iolCe_wmARbZ_blpQjzJQH
 
 # Справочная информация
 KPI_INFO = {
-    "что_такое_kpi": "KPI — это ваши ключевые показатели эффективности. Они показывают, насколько успешно человек или команда достигает целей.",
-    "как_писать": "Формулируйте задачи по принципу SMART: конкретно, измеримо, достижимо, релевантно, ограничено по времени.",
-    "критерии": "Задача считается выполненной, если она выполнена на 100%, в срок и с нужным качеством."
+    "what_is_kpi": "KPI — это ваши ключевые показатели эффективности. Они показывают, насколько успешно человек или команда достигает целей.",
+    "how_to_write": "Формулируйте задачи по принципу SMART: конкретно, измеримо, достижимо, релевантно, ограничено по времени.",
+    "criteria": "Задача считается выполненной, если она выполнена на 100%, в срок и с нужным качеством."
 }
 
 # Команда /start
@@ -42,9 +42,9 @@ async def напоминание(update: Update, context: ContextTypes.DEFAULT_T
 # Запуск бота
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("что_такое_kpi", info))
-app.add_handler(CommandHandler("как_писать", info))
-app.add_handler(CommandHandler("критерии", info))
-app.add_handler(CommandHandler("напоминание", напоминание))
+app.add_handler(CommandHandler("what_is_kpi", info))
+app.add_handler(CommandHandler("how_to_write", info))
+app.add_handler(CommandHandler("criteria", info))
+app.add_handler(CommandHandler("napominanie", remind)) 
 
 app.run_polling()
