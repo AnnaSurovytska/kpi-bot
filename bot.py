@@ -2,16 +2,17 @@ import os
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import FastAPI
+from telegram.ext import Application
 
 TOKEN = os.getenv("TOKEN")
 
-# Завантаження chat_id з файлу (або створюється після /getchatid)
 CHAT_ID = None
 try:
     with open("chat_id.txt", "r") as f:
         CHAT_ID = f.read().strip()
 except FileNotFoundError:
-    print("Файл chat_id.txt не знайдено — буде створено після команди /getchatid")
+    print("Файл chat_id.txt не найден. Он будет создан при первом использовании /getchatid.")
 
 KPI_LINK = 'https://docs.google.com/spreadsheets/d/187czH5iolCe_wmARbZ_blpQjzJQHQ7__/edit?gid=1652687997'
 
@@ -24,11 +25,11 @@ KPI_INFO = {
     "Инструкция": (
         "✍️ Пишем задачи по *SMART*: конкретны, измеримы, достижимы, релевантны, ограничены по времени.\n\n"
         "📌 *1) Фокусные задачи:*\n"
-        "Каждый месяц у тебя и сотрудников должны быть задачи в *Asana*, привязанные к KPI.\n\n"
+        "Каждый месяц у тебя и твоих сотрудников (если есть) должны быть зафиксированы задачи в *Asana* — они оформляются в связке с KPI.\n\n"
         "📌 *2) Постановка задач:*\n"
-        "С 1 по 3 число ставим задачи и вносим в таблицу.\n\n"
-        "📌 *3) Отчет:*\n"
-        "До 30 числа — заполняем таблицу: ссылка, %, и качество выполнения."
+        "Ты самостоятельно ставишь задачи своим сотрудникам с *1 по 3 число* каждого месяца и вносишь их в таблицу.\n\n"
+        "📌 *3) Отчёт по выполнению:*\n"
+        "До *30-го числа* каждого месяца ты заполняешь файл: ссылка на задачу в Asana, статус в %, краткая оценка качества выполнения."
     ),
     "Критерии": (
         "✅ Задача считается выполненной, если:\n"
@@ -44,14 +45,23 @@ keyboard = [
 ]
 markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# /start
+# Команды
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! Я помогу тебе не забыть про KPI и подскажу, как правильно их оформить.",
         reply_markup=markup
     )
 
-# Обработка кнопок
+async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global CHAT_ID
+    CHAT_ID = str(update.effective_chat.id)
+    with open("chat_id.txt", "w") as f:
+        f.write(CHAT_ID)
+    await update.message.reply_text(
+        f"✅ Ваш chat_id сохранён: `{CHAT_ID}`",
+        parse_mode="Markdown"
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text in KPI_INFO:
@@ -61,23 +71,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Пожалуйста, выбери команду с кнопки ниже 👇")
 
-# /getchatid
-async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message is None or update.message.chat.type not in ['group', 'supergroup', 'private']:
-        return
-
-    global CHAT_ID
-    CHAT_ID = str(update.effective_chat.id)
-
-    with open("chat_id.txt", "w") as f:
-        f.write(CHAT_ID)
-
-    await update.message.reply_text(
-        f"✅ Ваш chat_id сохранён: `{CHAT_ID}`",
-        parse_mode="Markdown"
-    )
-
-# Напоминание 1-го числа
+# Напоминания
 async def monthly_reminder_kpi(context: ContextTypes.DEFAULT_TYPE):
     if CHAT_ID:
         await context.bot.send_message(
@@ -93,7 +87,6 @@ async def monthly_reminder_kpi(context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
-# Напоминание 28-го числа
 async def kpi_completion_reminder(context: ContextTypes.DEFAULT_TYPE):
     if CHAT_ID:
         await context.bot.send_message(
@@ -106,16 +99,26 @@ async def kpi_completion_reminder(context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
-# Запуск
+# FastAPI-приложение для Webhook
+web_app = FastAPI()
 app = ApplicationBuilder().token(TOKEN).build()
+
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("getchatid", get_chat_id))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# Планировщик
 scheduler = BackgroundScheduler(timezone="Europe/Kyiv")
-scheduler.add_job(monthly_reminder_kpi, trigger='cron', day=1, hour=10, minute=0, args=[app.bot])
-scheduler.add_job(kpi_completion_reminder, trigger='cron', day=28, hour=10, minute=0, args=[app.bot])
+scheduler.add_job(monthly_reminder_kpi, 'cron', day=1, hour=10, minute=0, args=[app.bot])
+scheduler.add_job(kpi_completion_reminder, 'cron', day=28, hour=10, minute=0, args=[app.bot])
 scheduler.start()
 
-app.run_polling()
+@app.on_event("startup")
+async def startup():
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await app.updater.stop()
+    await app.stop()
