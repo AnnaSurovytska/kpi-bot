@@ -4,26 +4,24 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import os
 
 TOKEN = os.getenv("TOKEN")
-
-# ⚠️ Вкажи тут ID чата, куди слати нагадування (група або твій приват)
-CHAT_ID = os.getenv("CHAT_ID")  # Укажи це в Render як переменную окружения
+CHAT_ID = os.getenv("CHAT_ID")  # Укажи в Render
 
 KPI_LINK = 'https://docs.google.com/spreadsheets/d/187czH5iolCe_wmARbZ_blpQjzJQHQ7__/edit?gid=1652687997'
 
 KPI_INFO = {
     "Что такое KPI": (
         "📊 *KPI* — это конкретная метрика или задача, по которой оценивают, "
-        "насколько хорошо ты справляешься со своей работой. "
-        "Это как цель по которой можно понять: достигнута задача или нет.\n\n"
+        "насколько хорошо ты справляешься со своей работой.\n\n"
         "💡 Или, как сказал *Питер Друкер*: _«То, что измеряется — улучшается»_."
     ),
-    "Как писать": (
-        "✍️ Пиши задачи по *SMART* и заполняем в Asana. Потом заполняем файл.\n"
-        "• конкретны\n"
-        "• измеримы\n"
-        "• достижимы\n"
-        "• релевантны\n"
-        "• ограничены по времени"
+    "Инструкция": (
+        "✍️ Пишем задачи по *SMART*: конкретны, измеримы, достижимы, релевантны, ограничены по времени.\n\n"
+        "📌 *1) Фокусные задачи:*\n"
+        "Каждый месяц у тебя и твоих сотрудников (если есть) должны быть зафиксированы задачи в *Asana* — они оформляются в связке с KPI.\n\n"
+        "📌 *2) Постановка задач:*\n"
+        "Ты самостоятельно ставишь задачи своим сотрудникам с *1 по 3 число* каждого месяца и вносишь их в таблицу.\n\n"
+        "📌 *3) Отчёт по выполнению:*\n"
+        "До *30-го числа* каждого месяца ты заполняешь файл: ссылка на задачу в Asana, статус в %, краткая оценка качества выполнения."
     ),
     "Критерии": (
         "✅ Задача считается выполненной, если:\n"
@@ -46,17 +44,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=markup
     )
 
-# Обработка текстов
+# Обработка кнопок
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text in KPI_INFO:
-        await update.message.reply_text(KPI_INFO[text])
-    elif text == "Напомнить":
-        await update.message.reply_text(f"⏰ Не забудь внести KPI в таблицу!\n👉 {KPI_LINK}")
+        await update.message.reply_text(KPI_INFO[text], parse_mode='Markdown')
+    elif text == "Файл":
+        await update.message.reply_text(f"📎 Вот таблица KPI:\n{KPI_LINK}")
     else:
         await update.message.reply_text("Пожалуйста, выбери команду с кнопки ниже 👇")
 
-# Нагадування 1-го числа
+# Напоминание 1-го числа
 async def monthly_reminder_kpi(context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=CHAT_ID,
@@ -71,7 +69,7 @@ async def monthly_reminder_kpi(context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# Нагадування 28-го числа
+# Напоминание 28-го числа
 async def kpi_completion_reminder(context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=CHAT_ID,
@@ -83,35 +81,15 @@ async def kpi_completion_reminder(context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# Ініціалізація застосунку
+# Запуск
 app = ApplicationBuilder().token(TOKEN).build()
-
-# Обробники команд
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# ПЛАНУВАЛЬНИК (apscheduler)
+# Планировщик
 scheduler = BackgroundScheduler(timezone="Europe/Kyiv")
-
-# 1-е число щомісяця, 10:00
-scheduler.add_job(
-    monthly_reminder_kpi,
-    trigger='cron',
-    day=1,
-    hour=10,
-    minute=0,
-    args=[app.bot]
-)
-
-# 28-е число щомісяця, 10:00
-scheduler.add_job(
-    kpi_completion_reminder,
-    trigger='cron',
-    day=28,
-    hour=10,
-    minute=0,
-    args=[app.bot]
-)
-
+scheduler.add_job(monthly_reminder_kpi, trigger='cron', day=1, hour=10, minute=0, args=[app.bot])
+scheduler.add_job(kpi_completion_reminder, trigger='cron', day=28, hour=10, minute=0, args=[app.bot])
 scheduler.start()
+
 app.run_polling()
