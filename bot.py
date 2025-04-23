@@ -54,6 +54,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Пожалуйста, выбери команду с кнопки ниже 👇")
 
+# /getchatid
+async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    await update.message.reply_text(f"Ваш chat_id: `{chat_id}`", parse_mode="Markdown")
+
 # Напоминание 1-го числа
 async def monthly_reminder_kpi(context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
@@ -84,6 +89,7 @@ async def kpi_completion_reminder(context: ContextTypes.DEFAULT_TYPE):
 # Запуск
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("getchatid", get_chat_id))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # Планировщик
