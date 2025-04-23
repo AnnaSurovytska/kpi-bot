@@ -1,10 +1,17 @@
+import os
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from apscheduler.schedulers.background import BackgroundScheduler
-import os
 
 TOKEN = os.getenv("TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")  # Укажи в Render
+
+# Спроба завантажити chat_id з файлу
+CHAT_ID = None
+try:
+    with open("chat_id.txt", "r") as f:
+        CHAT_ID = f.read().strip()
+except FileNotFoundError:
+    print("Файл chat_id.txt не знайдено. Буде створено після першого /getchatid")
 
 KPI_LINK = 'https://docs.google.com/spreadsheets/d/187czH5iolCe_wmARbZ_blpQjzJQHQ7__/edit?gid=1652687997'
 
@@ -54,37 +61,47 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Пожалуйста, выбери команду с кнопки ниже 👇")
 
-# /getchatid
+# Команда /getchatid
 async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    await update.message.reply_text(f"Ваш chat_id: `{chat_id}`", parse_mode="Markdown")
+    global CHAT_ID
+    CHAT_ID = str(update.effective_chat.id)
+
+    with open("chat_id.txt", "w") as f:
+        f.write(CHAT_ID)
+
+    await update.message.reply_text(
+        f"✅ Ваш chat_id сохранён: `{CHAT_ID}`",
+        parse_mode="Markdown"
+    )
 
 # Напоминание 1-го числа
 async def monthly_reminder_kpi(context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=CHAT_ID,
-        text=(
-            "📅 *Пора поставить KPI на месяц!*\n"
-            "Дедлайн — *2-е число* каждого месяца.\n"
-            "Пожалуйста, внесите задачи в таблицу:\n"
-            f"{KPI_LINK}\n\n"
-            "⚠️ Обратите внимание: все задачи должны быть открыты *для Светланы Красниковой*, "
-            "а также Никиты Филимонова, Ольги Мец и Марины."
-        ),
-        parse_mode='Markdown'
-    )
+    if CHAT_ID:
+        await context.bot.send_message(
+            chat_id=CHAT_ID,
+            text=(
+                "📅 *Пора поставить KPI на месяц!*\n"
+                "Дедлайн — *2-е число* каждого месяца.\n"
+                "Пожалуйста, внесите задачи в таблицу:\n"
+                f"{KPI_LINK}\n\n"
+                "⚠️ Все задачи должны быть открыты *для Светланы Красниковой*, "
+                "а также Никиты Филимонова, Ольги Мец и Марины."
+            ),
+            parse_mode='Markdown'
+        )
 
 # Напоминание 28-го числа
 async def kpi_completion_reminder(context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=CHAT_ID,
-        text=(
-            "📌 *Финальный штрих!* Приближается дедлайн по KPI.\n"
-            "Просим внести выполнение KPI в таблицу до конца завтрашнего дня:\n"
-            f"{KPI_LINK}"
-        ),
-        parse_mode='Markdown'
-    )
+    if CHAT_ID:
+        await context.bot.send_message(
+            chat_id=CHAT_ID,
+            text=(
+                "📌 *Финальный штрих!* Приближается дедлайн по KPI.\n"
+                "Просим внести выполнение KPI в таблицу до конца завтрашнего дня:\n"
+                f"{KPI_LINK}"
+            ),
+            parse_mode='Markdown'
+        )
 
 # Запуск
 app = ApplicationBuilder().token(TOKEN).build()
