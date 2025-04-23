@@ -3,7 +3,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import datetime
 
 # ВСТАВЬ сюда свой токен от BotFather
-TOKEN = '7523350616:AAGIflsN_BP3tK2Kehoh7_8yNS7BZSMs-8E '
+import os
+TOKEN = os.getenv('7523350616:AAGIflsN_BP3tK2Kehoh7_8yNS7BZSMs-8E')
 
 # Ссылка на Google таблицу с KPI
 KPI_LINK = 'https://docs.google.com/spreadsheets/d/187czH5iolCe_wmARbZ_blpQjzJQHQ7__/edit?gid=1652687997'
