@@ -116,8 +116,8 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     scheduler = BackgroundScheduler(timezone="Europe/Kyiv")
-    scheduler.add_job(monthly_reminder_kpi, 'cron', day=1, hour=10, args=[app.bot])
-    scheduler.add_job(kpi_completion_reminder, 'cron', day=28, hour=10, args=[app.bot])
+    scheduler.add_job(monthly_reminder_kpi, 'cron', day=1, hour=14, args=[app.bot])
+    scheduler.add_job(kpi_completion_reminder, 'cron', day=28, hour=14, args=[app.bot])
 
     # Тестовое напоминание через 10 секунд после старта
     scheduler.add_job(monthly_reminder_kpi, 'date', run_date=datetime.now() + timedelta(seconds=10), args=[app.bot])
